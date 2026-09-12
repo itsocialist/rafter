@@ -599,6 +599,127 @@ html, body {
   border-color: rgba(6, 182, 212, 0.35);
 }
 
+.edit-btn {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(167, 139, 250, 0.18);
+  color: var(--lavender);
+}
+
+.edit-btn:hover {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: rgba(167, 139, 250, 0.32);
+}
+
+.metadata-form {
+  margin: -8px 0 24px;
+  padding: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(8, 10, 18, 0.66);
+}
+
+.metadata-heading {
+  margin-bottom: 14px;
+}
+
+.metadata-note {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+
+.metadata-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.metadata-grid label small {
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.metadata-grid input {
+  width: 100%;
+  height: 31px;
+  padding: 0 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.metadata-grid input:focus {
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.08);
+}
+
+.metadata-grid input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.metadata-wide {
+  grid-column: 1 / -1;
+}
+
+.metadata-error {
+  min-height: 17px;
+  margin-top: 8px;
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.metadata-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.metadata-save,
+.metadata-cancel {
+  height: 29px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.metadata-save {
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.11);
+  color: var(--green);
+}
+
+.metadata-cancel {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.metadata-save:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .btn-dot {
   width: 6px;
   height: 6px;

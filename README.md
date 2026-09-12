@@ -57,10 +57,12 @@ The dashboard runs locally at [http://localhost:9000](http://localhost:9000).
 
 The dashboard has two views:
 
-- **Services** provides lifecycle controls, health and ownership details, and a live 64 KB tail of combined stdout/stderr for the selected project.
+- **Services** provides lifecycle controls, editable project metadata, health and ownership details, and a live 64 KB tail of combined stdout/stderr for the selected project.
 - **Port Map** lists assigned and active ports with service, framework, state, ownership, PID, and path. Filters isolate listening services and conflicts.
 
 The daemon binds to `127.0.0.1` by default. State-changing requests are same-origin protected, and environment values never cross the dashboard API.
+
+Select a project and choose **Edit** to maintain its canonical name, type, framework label, port, start command, health check, aliases, and tags. Rafter keeps the project path and runtime read-only so a metadata edit cannot silently change process-ownership boundaries. A running process service must be stopped before its port can be changed.
 
 ## Use Rafter with an AI coding agent
 

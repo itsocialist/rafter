@@ -50,6 +50,19 @@
   const $btnStart = $('#btn-start');
   const $btnStop = $('#btn-stop');
   const $btnOpen = $('#btn-open');
+  const $btnEdit = $('#btn-edit');
+  const $metadataForm = $('#metadata-form');
+  const $metadataName = $('#metadata-name');
+  const $metadataType = $('#metadata-type');
+  const $metadataFramework = $('#metadata-framework');
+  const $metadataPort = $('#metadata-port');
+  const $metadataStartCmd = $('#metadata-start-cmd');
+  const $metadataHealth = $('#metadata-health');
+  const $metadataAliases = $('#metadata-aliases');
+  const $metadataTags = $('#metadata-tags');
+  const $metadataError = $('#metadata-error');
+  const $btnSaveMetadata = $('#btn-save-metadata');
+  const $btnCancelMetadata = $('#btn-cancel-metadata');
   const $btnStopAll = $('#btn-stop-all');
   const $btnGC = $('#btn-gc');
   const $main = $('#main');
@@ -95,10 +108,13 @@
 
   // ─── API Calls ──────────────────────────────────────────
 
-  async function actionFetch(url) {
+  async function actionFetch(url, { method = 'POST', body } = {}) {
+    const headers = { 'X-Rafter-Action': 'dashboard' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'X-Rafter-Action': 'dashboard' },
+      method,
+      headers,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
@@ -210,6 +226,67 @@
     $btnGC.disabled = false;
   }
 
+  function openMetadataEditor(project) {
+    $metadataName.value = project.name || '';
+    $metadataType.value = project.type || 'unknown';
+    $metadataFramework.value = project.framework || '';
+    $metadataPort.value = project.port || '';
+    $metadataStartCmd.value = project.startCmd || '';
+    $metadataHealth.value = project.healthCheck || '';
+    $metadataAliases.value = (project.aliases || []).join(', ');
+    $metadataTags.value = (project.tags || []).join(', ');
+    $metadataPort.disabled = project.running || project.runtime !== 'process';
+    $metadataPort.title = project.running
+      ? 'Stop the service before changing its port.'
+      : project.runtime !== 'process' ? 'Only process services use assigned ports.' : '';
+    $metadataError.textContent = '';
+    $metadataForm.classList.remove('hidden');
+    $btnEdit.setAttribute('aria-expanded', 'true');
+    $metadataName.focus();
+  }
+
+  function closeMetadataEditor() {
+    $metadataForm.classList.add('hidden');
+    $metadataError.textContent = '';
+    $btnEdit.setAttribute('aria-expanded', 'false');
+  }
+
+  function csvValues(value) {
+    return [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))];
+  }
+
+  async function apiUpdateMetadata(event) {
+    event.preventDefault();
+    if (!selectedProject) return;
+    const originalName = selectedProject.name;
+    const body = {
+      name: $metadataName.value.trim(),
+      type: $metadataType.value.trim().toLowerCase(),
+      framework: $metadataFramework.value.trim(),
+      startCmd: $metadataStartCmd.value.trim(),
+      healthCheck: $metadataHealth.value.trim(),
+      aliases: csvValues($metadataAliases.value),
+      tags: csvValues($metadataTags.value),
+    };
+    if (!$metadataPort.disabled) body.port = $metadataPort.value ? Number($metadataPort.value) : null;
+
+    $btnSaveMetadata.disabled = true;
+    $btnSaveMetadata.textContent = 'SAVING...';
+    $metadataError.textContent = '';
+    try {
+      const data = await actionFetch(`/api/project/${encodeURIComponent(originalName)}`, { method: 'PATCH', body });
+      await fetchProjects();
+      const updated = projects.find(project => project.name === data.project.name);
+      if (updated) selectProject(updated, getFilteredProjects().findIndex(project => project.name === updated.name));
+      closeMetadataEditor();
+    } catch (err) {
+      $metadataError.textContent = err.message;
+    } finally {
+      $btnSaveMetadata.disabled = false;
+      $btnSaveMetadata.textContent = 'SAVE CHANGES';
+    }
+  }
+
   // ─── Rendering ──────────────────────────────────────────
 
   function render() {
@@ -275,6 +352,7 @@
     selectedIndex = index;
     $detailEmpty.classList.add('hidden');
     $detailContent.classList.remove('hidden');
+    closeMetadataEditor();
 
     // Re-trigger animation
     $detailContent.style.animation = 'none';
@@ -551,6 +629,11 @@
 
   function initKeyboard() {
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !$metadataForm.classList.contains('hidden')) {
+        e.preventDefault();
+        closeMetadataEditor();
+        return;
+      }
       // Focus search on /
       if (e.key === '/' && document.activeElement !== $search) {
         e.preventDefault();
@@ -577,8 +660,8 @@
         return;
       }
 
-      // Don't intercept when typing in search
-      if (document.activeElement === $search) return;
+      // Don't intercept while editing fields or operating buttons.
+      if (e.target.closest('input, textarea, select, button')) return;
 
       if (e.key === '1') {
         switchView('services');
@@ -657,6 +740,13 @@
         window.open(serviceUrl(selectedProject), '_blank', 'noopener');
       }
     });
+    $btnEdit.addEventListener('click', () => {
+      if (!selectedProject) return;
+      if ($metadataForm.classList.contains('hidden')) openMetadataEditor(selectedProject);
+      else closeMetadataEditor();
+    });
+    $metadataForm.addEventListener('submit', apiUpdateMetadata);
+    $btnCancelMetadata.addEventListener('click', closeMetadataEditor);
 
     $btnStopAll.addEventListener('click', apiStopAll);
     $btnGC.addEventListener('click', apiGC);

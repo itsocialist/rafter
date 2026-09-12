@@ -45,7 +45,12 @@ export async function daemonCommand(action) {
     case 'start': return startDaemon();
     case 'stop': return stopDaemon();
     case 'restart': {
-      await stopDaemon();
+      const stopped = await stopDaemon();
+      if (!stopped) {
+        error('Restart aborted because the existing daemon did not exit.');
+        console.log();
+        return;
+      }
       await new Promise(r => setTimeout(r, 1000));
       return startDaemon();
     }
@@ -112,7 +117,7 @@ async function stopDaemon() {
   if (!pid) {
     info('Rafter daemon is not running.');
     console.log();
-    return;
+    return true;
   }
 
   try {
@@ -124,7 +129,7 @@ async function stopDaemon() {
         try { unlinkSync(PID_FILE); } catch {}
         success(`Rafter daemon stopped (PID ${pid})`);
         console.log();
-        return;
+        return true;
       }
     }
     warn(`Daemon received SIGTERM but PID ${pid} is still present.`);
@@ -132,6 +137,7 @@ async function stopDaemon() {
     error(`Could not stop daemon (PID ${pid}). Try: ${chalk.cyan(`kill -9 ${pid}`)}`);
   }
   console.log();
+  return false;
 }
 
 async function daemonStatus() {

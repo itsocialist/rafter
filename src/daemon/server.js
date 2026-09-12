@@ -6,9 +6,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
-import { getAllProjects, getConfig, getProject, PATHS } from '../core/registry.js';
+import { getAllProjects, getConfig, getProject, registerProject, validatePort, PATHS } from '../core/registry.js';
 import { findOrphans, getServerStatus, readServiceLog, startServer, stopAll, stopServer } from '../core/process.js';
-import { ALL_PORT_RANGES } from '../core/ports.js';
+import { ALL_PORT_RANGES, checkPort } from '../core/ports.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,8 +24,54 @@ function isAllowedOrigin(origin, port) {
 }
 
 function apiError(res, error) {
-  const status = error?.name === 'PortConflictError' ? 409 : 500;
+  const status = error?.statusCode || (error?.name === 'PortConflictError' ? 409 : error?.name === 'RegistryError' ? 400 : 500);
   res.status(status).json({ error: error?.message || 'Unexpected Rafter error' });
+}
+
+function requestError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function editableMetadata(project, body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw requestError('Metadata must be a JSON object.');
+  const allowed = new Set(['name', 'type', 'framework', 'port', 'startCmd', 'healthCheck', 'aliases', 'tags']);
+  const unknown = Object.keys(body).filter(key => !allowed.has(key));
+  if (unknown.length) throw requestError(`Unsupported metadata field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`);
+
+  const next = { ...project };
+  if ('name' in body) next.name = body.name;
+  if ('type' in body) {
+    if (typeof body.type !== 'string' || !/^[a-z][a-z0-9-]{0,31}$/.test(body.type)) {
+      throw requestError('Type must be a lowercase identifier such as next, vite, express, or python.');
+    }
+    next.type = body.type;
+  }
+  if ('framework' in body) {
+    if (typeof body.framework !== 'string' || body.framework.length > 128 || /[\0-\x1f\x7f]/.test(body.framework)) {
+      throw requestError('Framework must be a plain-text value of 128 characters or fewer.');
+    }
+    next.framework = body.framework.trim() || undefined;
+  }
+  if ('startCmd' in body) {
+    if (typeof body.startCmd !== 'string' || body.startCmd.length > 4096) throw requestError('Start command must be 4096 characters or fewer.');
+    next.startCmd = body.startCmd.trim();
+  }
+  if ('healthCheck' in body) {
+    if (typeof body.healthCheck !== 'string') throw requestError('Health check must be a URL or path string.');
+    next.healthCheck = body.healthCheck.trim() || undefined;
+  }
+  for (const field of ['aliases', 'tags']) {
+    if (field in body) {
+      if (!Array.isArray(body[field]) || body[field].some(value => typeof value !== 'string')) {
+        throw requestError(`${field[0].toUpperCase()}${field.slice(1)} must be an array of strings.`);
+      }
+      next[field] = body[field];
+    }
+  }
+  if ('port' in body) next.port = body.port === null || body.port === '' ? undefined : validatePort(body.port, { optional: project.runtime !== 'process' });
+  return next;
 }
 
 function publicProject(project) {
@@ -126,6 +172,32 @@ export function createRafterServer(overrides = {}) {
       if (!project) return res.status(404).json({ error: 'Project not found' });
       const requestedBytes = Number(req.query.bytes || 64 * 1024);
       res.json({ name: project.name, ...readServiceLog(project, { maxBytes: requestedBytes }) });
+    } catch (error) { apiError(res, error); }
+  });
+
+  app.patch('/api/project/:name', async (req, res) => {
+    try {
+      const project = getProject(req.params.name);
+      if (!project) return res.status(404).json({ error: 'Project not found' });
+      const next = editableMetadata(project, req.body);
+
+      if (next.port !== project.port) {
+        const status = await getServerStatus(project);
+        if (status.running || ['starting', 'no-listener'].includes(status.state)) {
+          throw requestError(`Stop ${project.name} before changing its port.`, 409);
+        }
+        const assigned = getAllProjects().find(item => item.name !== project.name && item.port === next.port);
+        if (assigned) throw requestError(`Port ${next.port} is assigned to ${assigned.name}.`, 409);
+        if (next.port) {
+          const live = checkPort(next.port);
+          if (live.inUse) throw requestError(`Port ${next.port} is listening (${live.process}, PID ${live.pid}).`, 409);
+        }
+      }
+
+      const saved = registerProject(next);
+      const response = { ...publicProject(saved), ...(await getServerStatus(saved)) };
+      await broadcastStatus();
+      res.json({ success: true, project: response });
     } catch (error) { apiError(res, error); }
   });
 
@@ -297,8 +369,14 @@ export function createRafterServer(overrides = {}) {
 
   async function close() {
     if (statusTimer) clearInterval(statusTimer);
-    for (const client of clients) client.close();
-    await new Promise(resolvePromise => server.close(() => resolvePromise()));
+    for (const client of clients) client.terminate();
+    clients.clear();
+    await new Promise(resolvePromise => wss.close(() => resolvePromise()));
+    await new Promise(resolvePromise => {
+      if (!server.listening) return resolvePromise();
+      server.close(() => resolvePromise());
+      server.closeAllConnections?.();
+    });
   }
 
   return { app, server, wss, start, close, broadcastStatus, config: { ...config, dashboardHost: host, dashboardPort: requestedPort }, startedAt };

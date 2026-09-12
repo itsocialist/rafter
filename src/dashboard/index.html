@@ -100,7 +100,55 @@
               <span class="btn-dot stop-dot"></span> STOP
             </button>
             <button id="btn-open" class="action-btn open-btn">↗ OPEN</button>
+            <button id="btn-edit" class="action-btn edit-btn">✎ EDIT</button>
           </div>
+          <form id="metadata-form" class="metadata-form hidden">
+            <div class="metadata-heading">
+              <div>
+                <div class="section-label">PROJECT METADATA</div>
+                <div class="metadata-note">Path and runtime remain fixed to protect process ownership.</div>
+              </div>
+            </div>
+            <div class="metadata-grid">
+              <label>
+                <span>NAME</span>
+                <input id="metadata-name" name="name" maxlength="128" required>
+              </label>
+              <label>
+                <span>TYPE</span>
+                <input id="metadata-type" name="type" maxlength="32" pattern="[a-z][a-z0-9-]*" required>
+              </label>
+              <label>
+                <span>FRAMEWORK</span>
+                <input id="metadata-framework" name="framework" maxlength="128">
+              </label>
+              <label>
+                <span>PORT</span>
+                <input id="metadata-port" name="port" type="number" min="1" max="65535">
+              </label>
+              <label class="metadata-wide">
+                <span>START COMMAND</span>
+                <input id="metadata-start-cmd" name="startCmd" maxlength="4096">
+              </label>
+              <label class="metadata-wide">
+                <span>HEALTH CHECK</span>
+                <input id="metadata-health" name="healthCheck" maxlength="2048" placeholder="/health or http://localhost:3400/health">
+              </label>
+              <label class="metadata-wide">
+                <span>ALIASES <small>comma separated</small></span>
+                <input id="metadata-aliases" name="aliases">
+              </label>
+              <label class="metadata-wide">
+                <span>TAGS <small>comma separated</small></span>
+                <input id="metadata-tags" name="tags">
+              </label>
+            </div>
+            <div id="metadata-error" class="metadata-error" role="alert"></div>
+            <div class="metadata-actions">
+              <button id="btn-save-metadata" class="metadata-save" type="submit">SAVE CHANGES</button>
+              <button id="btn-cancel-metadata" class="metadata-cancel" type="button">CANCEL</button>
+            </div>
+          </form>
           <div class="detail-section">
             <div class="section-label">COMMAND</div>
             <code id="detail-cmd" class="section-code"></code>
