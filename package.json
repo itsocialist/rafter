@@ -1,0 +1,61 @@
+{
+  "name": "@itsocialist/rafter",
+  "version": "1.0.0",
+  "description": "Local service manager and port map for AI-assisted multi-project development.",
+  "type": "module",
+  "bin": {
+    "rafter": "./src/cli/index.js"
+  },
+  "scripts": {
+    "start": "node src/cli/index.js",
+    "daemon": "node src/daemon/server.js",
+    "test": "node --test",
+    "check": "node --check src/cli/index.js && node --check src/daemon/server.js && node --check src/dashboard/app.js && node --test",
+    "prepublishOnly": "npm run check"
+  },
+  "files": [
+    "src/",
+    ".agent/skills/rafter-handoff/SKILL.md",
+    ".agent/workflows/dev-*.md",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "keywords": [
+    "dev-tools",
+    "server-manager",
+    "port-manager",
+    "cli",
+    "developer-experience",
+    "ai-agents",
+    "vibe-coding",
+    "multi-project"
+  ],
+  "author": "Brian Dawson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsocialist/rafter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/itsocialist/rafter/issues"
+  },
+  "homepage": "https://github.com/itsocialist/rafter#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "express": "^5.2.1",
+    "ws": "^8.21.3"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+*.log
+coverage/
+.env
+.env.*
+!.env.example
+/.claude/
+/.rafter.json
+/.agent/workflows/managewf.md
+npm-debug.log*

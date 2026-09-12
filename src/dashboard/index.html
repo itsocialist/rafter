@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rafter — Mission Control</title>
+  <meta name="description" content="Rafter AI Dev Service Manager — Mission Control Dashboard">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Particle background -->
+  <canvas id="particles"></canvas>
+
+  <!-- Main layout -->
+  <div id="app">
+
+    <!-- Header -->
+    <header id="header">
+      <div class="header-brand">
+        <span class="brand-icon">⌂</span>
+        <span class="brand-text">RAFTER</span>
+        <span class="brand-sub">MISSION CONTROL</span>
+      </div>
+      <nav class="view-nav" aria-label="Dashboard views">
+        <button id="view-services" class="view-tab active" type="button" aria-pressed="true">SERVICES</button>
+        <button id="view-ports" class="view-tab" type="button" aria-pressed="false">PORT MAP</button>
+      </nav>
+      <div class="header-search">
+        <span class="search-icon">/</span>
+        <input type="text" id="search-input" placeholder="Search services..." autocomplete="off" />
+      </div>
+      <div class="header-actions">
+        <button id="btn-stop-all" class="header-btn danger" title="Stop All">■ STOP ALL</button>
+        <button id="btn-gc" class="header-btn" title="Inspect unmanaged listeners">DISCOVER</button>
+        <div id="daemon-status" class="daemon-badge">
+          <span class="daemon-dot"></span>
+          <span class="daemon-label">rafterd</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main id="main">
+
+      <!-- Project Sidebar -->
+      <aside id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">PROJECTS</span>
+          <span id="project-count" class="sidebar-count">0</span>
+        </div>
+        <div id="project-list" class="project-list"></div>
+      </aside>
+
+      <!-- Detail Manifold -->
+      <section id="detail">
+        <div id="detail-empty" class="detail-empty">
+          <div class="empty-icon">⌂</div>
+          <div class="empty-title">Select a project</div>
+          <div class="empty-sub">Click a project in the sidebar or press ↑↓ to navigate</div>
+        </div>
+        <div id="detail-content" class="detail-content hidden">
+          <div class="detail-header">
+            <h1 id="detail-name" class="detail-name"></h1>
+            <span id="detail-badge" class="framework-badge"></span>
+          </div>
+          <div class="detail-meta">
+            <div class="meta-item">
+              <span class="meta-label">PORT</span>
+              <span id="detail-port" class="meta-value port-value"></span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">STATUS</span>
+              <span id="detail-status" class="meta-value"></span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">PID</span>
+              <span id="detail-pid" class="meta-value"></span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">MEMORY</span>
+              <span id="detail-mem" class="meta-value"></span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">HEALTH</span>
+              <span id="detail-health" class="meta-value"></span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">OWNERSHIP</span>
+              <span id="detail-owner" class="meta-value"></span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button id="btn-start" class="action-btn start-btn">
+              <span class="btn-dot start-dot"></span> START
+            </button>
+            <button id="btn-stop" class="action-btn stop-btn">
+              <span class="btn-dot stop-dot"></span> STOP
+            </button>
+            <button id="btn-open" class="action-btn open-btn">↗ OPEN</button>
+          </div>
+          <div class="detail-section">
+            <div class="section-label">COMMAND</div>
+            <code id="detail-cmd" class="section-code"></code>
+          </div>
+          <div class="detail-section">
+            <div class="section-label">PATH</div>
+            <code id="detail-path" class="section-path"></code>
+          </div>
+          <div class="detail-section output-section">
+            <div class="output-heading">
+              <div>
+                <div class="section-label">SERVICE OUTPUT</div>
+                <div id="detail-output-meta" class="output-meta">stdout + stderr</div>
+              </div>
+              <button id="btn-refresh-output" class="output-refresh" type="button">REFRESH</button>
+            </div>
+            <pre id="detail-output" class="service-output" tabindex="0" aria-live="polite">Select a service to view its output.</pre>
+          </div>
+          <div id="detail-deployments-section" class="detail-section hidden">
+            <div class="section-label">DEPLOYMENTS</div>
+            <div id="detail-deployments" class="deployments-list"></div>
+          </div>
+          <div id="detail-tags-section" class="detail-section hidden">
+            <div class="section-label">TAGS</div>
+            <div id="detail-tags" class="tags-list"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Full Port Map -->
+    <main id="port-map-screen" class="port-map-screen hidden">
+      <section class="port-map-header">
+        <div>
+          <div class="port-map-kicker">NETWORK INVENTORY</div>
+          <h1>Port map</h1>
+          <p>Assigned services, active listeners, ownership, and conflicts.</p>
+        </div>
+        <button id="btn-refresh-ports" class="header-btn" type="button">REFRESH</button>
+      </section>
+
+      <section id="port-summary" class="port-summary" aria-label="Port summary"></section>
+
+      <section class="port-map-panel">
+        <div class="port-panel-heading">
+          <div>
+            <div class="section-label">ALLOCATED RANGES</div>
+            <div class="port-panel-note">Markers show assigned ports; bright markers are listening.</div>
+          </div>
+        </div>
+        <div id="port-ranges" class="port-ranges"></div>
+      </section>
+
+      <section class="port-map-panel port-list-panel">
+        <div class="port-panel-heading">
+          <div>
+            <div class="section-label">PORT INVENTORY</div>
+            <div id="port-list-count" class="port-panel-note"></div>
+          </div>
+          <div class="port-filter" role="group" aria-label="Port inventory filter">
+            <button class="port-filter-btn active" data-port-filter="all" type="button">ALL</button>
+            <button class="port-filter-btn" data-port-filter="listening" type="button">LISTENING</button>
+            <button class="port-filter-btn" data-port-filter="attention" type="button">ATTENTION</button>
+          </div>
+        </div>
+        <div class="port-table-wrap">
+          <table class="port-table">
+            <thead>
+              <tr>
+                <th>PORT</th>
+                <th>SERVICE</th>
+                <th>FRAMEWORK</th>
+                <th>STATE</th>
+                <th>OWNERSHIP</th>
+                <th>PID</th>
+                <th>PATH</th>
+              </tr>
+            </thead>
+            <tbody id="port-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Port Topology Strip -->
+    <footer id="topology">
+      <div id="topology-strip" class="topology-strip"></div>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
